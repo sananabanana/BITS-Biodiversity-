@@ -1,0 +1,2312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>BITS Hyderabad Biodiversity Atlas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --bg-elevated: #0f1419;
+      --panel: #161b26;
+      --panel-hover: #1c2333;
+      --border: #2a3441;
+      --border-bright: #3d4a5e;
+      --muted: #8b96a5;
+      --text: #e6edf3;
+      --text-bright: #ffffff;
+      --accent: #39d353;
+      --accent-glow: rgba(57, 211, 83, 0.2);
+      --accent2: #58a6ff;
+      --accent2-glow: rgba(88, 166, 255, 0.2);
+      --warning: #f59e42;
+      --purple: #bc8cff;
+      --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      --gradient-3: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    
+    /* Animated background */
+    .bg-animation {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(88, 166, 255, 0.15), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(57, 211, 83, 0.1), transparent);
+      animation: bgShift 20s ease-in-out infinite;
+    }
+    
+    @keyframes bgShift {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+    }
+    
+    /* Header */
+    header {
+      padding: 32px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15, 20, 31, 0.8);
+      backdrop-filter: blur(20px) saturate(180%);
+      position: sticky;
+      top: 0;
+      z-index: 500;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .header-content {
+      max-width: 100%;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .brand-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--gradient-1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 4px 12px var(--accent-glow);
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+    }
+    
+    .brand-text h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--text-bright), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .brand-text .tagline {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+    
+    .header-stats {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+    
+    .stat-chip {
+      padding: 8px 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+    }
+    
+    .stat-chip:hover {
+      background: var(--panel-hover);
+      border-color: var(--border-bright);
+      transform: translateY(-2px);
+    }
+    
+    .stat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent-glow);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    /* Main layout */
+    .container {
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    
+    .layout {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    
+    /* Panels */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gradient-1);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .panel:hover::before {
+      opacity: 1;
+    }
+    
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .panel-title {
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .panel-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--gradient-3);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    
+    /* Map */
+    #map {
+      height: 580px;
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border-bright);
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1) inset, 0 12px 40px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    
+    /* Controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    
+    .btn {
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      font-weight: 500;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--accent2), var(--purple));
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent2);
+      box-shadow: 0 4px 12px var(--accent2-glow);
+    }
+    
+    .btn:hover::before {
+      opacity: 0.1;
+    }
+    
+    .btn:active {
+      transform: translateY(0);
+    }
+    
+    .btn.accent {
+      background: linear-gradient(135deg, rgba(88, 166, 255, 0.15), rgba(188, 140, 255, 0.15));
+      border-color: var(--accent2);
+      color: var(--text-bright);
+    }
+    
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    
+    /* Legend */
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--bg-elevated);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text);
+      padding: 6px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+    
+    .legend-item:hover {
+      background: var(--panel);
+    }
+    
+    .swatch {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 0, 0, 0.3);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Metrics grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .metric {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .metric::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--gradient-1);
+      transform: scaleY(0);
+      transition: transform 0.3s ease;
+    }
+    
+    .metric:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      border-color: var(--border-bright);
+    }
+    
+    .metric:hover::before {
+      transform: scaleY(1);
+    }
+    
+    .metric-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    
+    .metric-value {
+      font-size: 32px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--text-bright), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+    }
+    
+    .metric-hint {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0;
+    }
+    
+    .tab {
+      padding: 12px 20px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+    }
+    
+    .tab:hover {
+      color: var(--text);
+      background: var(--bg-elevated);
+    }
+    
+    .tab.active {
+      color: var(--accent2);
+      border-bottom-color: var(--accent2);
+    }
+    
+    /* Cards */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    
+    .card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      transition: all 0.3s ease;
+    }
+    
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+      border-color: var(--border-bright);
+    }
+    
+    .card-title {
+      font-weight: 700;
+      font-size: 15px;
+      margin-bottom: 10px;
+      color: var(--text-bright);
+    }
+    
+    .card-content {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    /* Details/Accordion */
+    details {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin: 16px 0;
+      transition: all 0.3s ease;
+    }
+    
+    details[open] {
+      border-color: var(--accent2);
+      box-shadow: 0 4px 12px var(--accent2-glow);
+    }
+    
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      user-select: none;
+      transition: color 0.2s ease;
+    }
+    
+    summary:hover {
+      color: var(--accent2);
+    }
+    
+    summary::before {
+      content: '▶';
+      font-size: 12px;
+      transition: transform 0.3s ease;
+    }
+    
+    details[open] summary::before {
+      transform: rotate(90deg);
+    }
+    
+    details > div {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    
+    /* Methods section */
+    .methods {
+      margin-top: 20px;
+    }
+    
+    .methods h3 {
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: var(--text-bright);
+    }
+    
+    .methods ul {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .methods li {
+      padding: 10px 0 10px 28px;
+      position: relative;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    .methods li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: bold;
+    }
+    
+    /* Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      animation: fadeIn 0.2s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .modal.open {
+      display: flex;
+    }
+    
+    .modal-box {
+      background: var(--panel);
+      border: 1px solid var(--border-bright);
+      border-radius: 16px;
+      max-width: 96vw;
+      max-height: 92vh;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      animation: slideUp 0.3s ease;
+    }
+    
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    
+    .modal-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-title {
+      font-weight: 700;
+      font-size: 18px;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .icon-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .icon-btn:hover {
+      background: var(--panel-hover);
+      border-color: var(--border-bright);
+      transform: translateY(-1px);
+    }
+    
+    .img-frame {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    
+    .img-frame img {
+      max-width: 90vw;
+      max-height: 78vh;
+      border-radius: 8px;
+    }
+    
+    /* Section headers */
+    h2 {
+      font-size: 22px;
+      font-weight: 800;
+      margin: 24px 0 16px;
+      background: linear-gradient(135deg, var(--text-bright), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 20px 0 12px;
+      color: var(--text-bright);
+    }
+    
+    h4 {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 16px 0 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Quick stats bar */
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .quick-stat {
+      background: var(--gradient-1);
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      transition: transform 0.3s ease;
+    }
+    
+    .quick-stat:nth-child(2) {
+      background: var(--gradient-2);
+    }
+    
+    .quick-stat:nth-child(3) {
+      background: var(--gradient-3);
+    }
+    
+    .quick-stat:hover {
+      transform: translateY(-4px);
+    }
+    
+    .quick-stat-value {
+      font-size: 36px;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 4px;
+    }
+    
+    .quick-stat-label {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 600;
+    }
+    
+    /* Footer */
+    footer {
+      padding: 32px 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-elevated);
+    }
+    
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      
+      #map {
+        height: 480px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .header-stats {
+        width: 100%;
+        justify-content: space-between;
+      }
+      
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .quick-stats {
+        grid-template-columns: 1fr;
+      }
+      
+      #map {
+        height: 380px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-bright);
+      border-radius: 5px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--muted);
+    }
+
+    /* Species Flip Card Styles */
+    .flip-card-container {
+      perspective: 1200px;
+      width: 550px;
+      margin: 0 auto;
+    }
+
+    .flip-card {
+      width: 550px;
+      max-width: 550px;
+      height: 600px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.7s ease;
+    }
+
+    .flip-card.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      backface-visibility: hidden;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Front face - Image only */
+    .card-front {
+      background: #000;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .species-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-overlay {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      padding: 30px;
+      background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+    }
+
+    .overlay-content h2 {
+      color: white;
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+    }
+
+    .overlay-content .scientific {
+      color: rgba(255,255,255,0.85);
+      font-size: 16px;
+      font-style: italic;
+      margin-bottom: 16px;
+    }
+
+    .flip-btn {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.4);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(6px);
+    }
+
+    .flip-btn:hover {
+      background: white;
+      color: black;
+    }
+
+    /* Back face - Details */
+    .card-back {
+      background: var(--panel);
+      transform: rotateY(180deg);
+      display: flex;
+      flex-direction: column;
+      padding: 30px;
+    }
+
+    .back-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .back-header h2 {
+      color: var(--text-bright);
+      font-size: 24px;
+      margin: 0;
+    }
+
+    .details-content {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .info-section {
+      margin-bottom: 20px;
+    }
+
+    .info-section h4 {
+      color: var(--accent2);
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-transform: none;
+    }
+
+    .info-section p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .back-btn {
+      margin-top: 20px;
+      background: var(--accent2);
+      border-color: var(--accent2);
+      color: white;
+    }
+
+    .back-btn:hover {
+      background: #4a8ed9;
+      color: white;
+    }
+
+    .close-species-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+
+    .close-species-btn:hover {
+      background: rgba(0,0,0,0.8);
+      transform: rotate(90deg);
+    }
+
+    /* Custom popup button */
+    .leaflet-popup-content {
+      margin: 14px;
+    }
+
+    .view-species-btn {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, var(--accent2), var(--purple));
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .view-species-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(88, 166, 255, 0.4);
+    }
+
+    /* Comparative Index Modal */
+    .index-modal-box {
+      background: var(--panel);
+      border: 1px solid var(--border-bright);
+      border-radius: 20px;
+      max-width: 1200px;
+      width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      animation: slideUp 0.3s ease;
+    }
+
+    .index-modal-header {
+      padding: 30px 30px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      background: var(--panel);
+      z-index: 10;
+    }
+
+    .index-modal-title {
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--text-bright), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .index-modal-content {
+      padding: 30px;
+    }
+
+    .index-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    .index-chart-container {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 30px;
+    }
+
+    .index-chart-wrapper {
+      height: 400px;
+    }
+
+    .index-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+    }
+
+    .index-info-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.3s ease;
+    }
+
+    .index-info-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      border-color: var(--border-bright);
+    }
+
+    .index-info-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .index-info-card p {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .index-table-container {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .index-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: transparent;
+    }
+
+    .index-table th {
+      background: var(--panel-hover);
+      padding: 16px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--accent2);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .index-table td {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .index-table tr:hover {
+      background: var(--panel-hover);
+    }
+
+    .habitat-label {
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    /* Hero Image */
+    .hero-image {
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      display: block;
+      object-fit: cover;
+    }
+
+    @media (max-width: 768px) {
+      .hero-image {
+        object-fit: cover;
+        max-height: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+ 
+  
+  <div class="bg-animation"></div>
+  
+  <header>
+    <div class="header-content">
+      <div class="brand">
+        <div class="brand-icon">🌿</div>
+        <div class="brand-text">
+          <h1>BITS Hyderabad Biodiversity Atlas</h1>
+          <div class="tagline">Advanced GIS mapping • Field surveys • Campus-wide diversity analytics</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="layout">
+      <!-- Left: Map Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-icon">🗺️</div>
+            Interactive Campus Map
+          </div>
+        </div>
+        
+        <div class="controls">
+          <button class="btn accent" id="btn-campus">🏫 Campus Overview</button>
+          <button class="btn" id="btn-urban">🏘️ Urban Transects</button>
+          <button class="btn" id="btn-forests">🌲 Forest Quadrats</button>
+          <button class="btn" id="btn-points">📍 Sampling Points</button>
+        </div>
+        
+        <div id="map"></div>
+        
+        <div class="legend">
+          <div class="legend-item">
+            <span class="swatch" style="background:#3fb950"></span>
+            <span>Campus Boundary</span>
+          </div>
+          <div class="legend-item">
+            <span class="swatch" style="background:#d29922"></span>
+            <span>Urbanized Areas</span>
+          </div>
+          <div class="legend-item">
+            <span class="swatch" style="background:#2ea043"></span>
+            <span>Forested Areas</span>
+          </div>
+          <div class="legend-item">
+            <span class="swatch" style="background:#58a6ff"></span>
+            <span>Water Bodies</span>
+          </div>
+          <div class="legend-item">
+            <span class="swatch" style="background:#9b59b6"></span>
+            <span>Gardens & Lawns</span>
+          </div>
+        </div>
+        
+        <div class="methods">
+          <h3>Methodology</h3>
+          <ul>
+            <li>Interactive mapping using Leaflet.js with OpenStreetMap tiles</li>
+            <li>50×50m quadrats for comprehensive forested area surveys</li>
+            <li>100m line transects along urbanized corridors</li>
+            <li>Strategic point sampling for gardens, lawns, and aquatic habitats</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Right: Data Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-icon">📊</div>
+            Diversity Metrics
+          </div>
+        </div>
+        
+        <h2>Campus-Wide Analysis</h2>
+        <div class="metrics-grid">
+          <div class="metric">
+            <div class="metric-label">Shannon-Wiener (H′)</div>
+            <div class="metric-value">1.37</div>
+            <div class="metric-hint">Low–moderate diversity; dominated by few groups</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Simpson's D</div>
+            <div class="metric-value">0.458</div>
+            <div class="metric-hint">46% probability same group</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Simpson's (1−D)</div>
+            <div class="metric-value">0.542</div>
+            <div class="metric-hint">Moderate group distinction</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Evenness (J)</div>
+            <div class="metric-value">0.59</div>
+            <div class="metric-hint">Uneven distribution pattern</div>
+          </div>
+        </div>
+
+        <details open>
+          <summary>Key Insights</summary>
+          <div>
+            The Shannon-Wiener index (H′ = 1.37) and Simpson's diversity (1−D = 0.54) reveal moderate overall diversity with significant compositional skew. Trees constitute approximately 50% of recorded species, while terrestrial plants account for 25%. The evenness index (J = 0.59) confirms imbalanced abundance distribution across taxonomic groups, suggesting opportunities for biodiversity enhancement.
+          </div>
+        </details>
+
+        <h3>Habitat-Specific Indices</h3>
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-title">🏘️ Urbanized Zones</div>
+            <div class="card-content">
+              <strong>H′ 1.368</strong> • <strong>1−D 0.708</strong> • <strong>J 0.703</strong><br>
+              Most balanced species composition among all surveyed habitats. Line transects reveal high adaptability.
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">🌲 Forested Areas</div>
+            <div class="card-content">
+              <strong>H′ 1.195</strong> • <strong>1−D 0.616</strong> • <strong>J 0.575</strong><br>
+              Moderate diversity. Terrestrial plants (55%) and trees (25%) dominate quadrat surveys.
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">🌺 Gardens & Lawns</div>
+            <div class="card-content">
+              <strong>H′ 0.815</strong> • <strong>1−D 0.467</strong> • <strong>J 0.455</strong><br>
+              Dominated by trees (~67.5%) and terrestrial plants (~27.6%). Lower diversity profile.
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">💧 Water Bodies</div>
+            <div class="card-content">
+              <strong>H′ 0.552</strong> • <strong>1−D 0.266</strong> • <strong>J 0.398</strong><br>
+              Aquatic plants dominate (~85%). Lowest diversity among habitat types.
+            </div>
+          </div>
+        </div>
+
+        <h3>Data Visualizations</h3>
+        
+        <h4>Overall Campus</h4>
+        <div class="controls">
+          <button class="btn accent" onclick="openInteractiveChart()">
+            📊 Overall Abundance Chart
+          </button>
+        </div>
+        
+        <h4>Comparative Indices</h4>
+        <div class="controls">
+          <button class="btn" onclick="openIndexModal('shannon')">📈 Shannon Index by Habitat</button>
+          <button class="btn" onclick="openIndexModal('simpson')">📉 Simpson's Index by Habitat</button>
+          <button class="btn" onclick="openIndexModal('evenness')">⚖️ Evenness by Habitat</button>
+        </div>
+        
+        <h4>Habitat Composition</h4>
+        <div class="controls">
+          <button class="btn" onclick="openHabitatModal('gardens')">🌺 Gardens & Lawns</button>
+          <button class="btn" onclick="openHabitatModal('forests')">🌲 Forested Areas</button>
+          <button class="btn" onclick="openHabitatModal('urban')">🏘️ Urban Transects</button>
+          <button class="btn" onclick="openHabitatModal('water')">💧 Water Bodies</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    BITS Pilani Hyderabad Biodiversity Project • Place the listed JPG files beside this HTML page to enable chart visualization
+  </footer>
+
+  <!-- Chart Modal -->
+  <div class="modal" id="chartModal">
+    <div class="modal-box">
+      <div class="modal-toolbar">
+        <div class="modal-title" id="modalTitle">Chart Viewer</div>
+        <div class="modal-actions">
+          <button class="icon-btn" id="closeBtn">✕ Close</button>
+        </div>
+      </div>
+      <div class="img-frame">
+        <img id="modalImg" alt="Biodiversity Chart"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- Species Flip Card Modal -->
+  <div class="modal" id="speciesModal">
+    <div class="modal-box" style="max-width: 550px; width: 550px; padding: 0; overflow: visible;">
+      <div class="flip-card-container">
+        <div class="flip-card" id="flipCard">
+          <!-- FRONT FACE -->
+          <div class="card-face card-front">
+            <img id="speciesImage" class="species-image" alt="Species">
+            <div class="image-overlay">
+              <div class="overlay-content">
+                <h2 id="speciesName"></h2>
+                <p class="scientific" id="speciesScientific"></p>
+                <button class="flip-btn" onclick="flipSpeciesCard()">
+                  View Details →
+                </button>
+              </div>
+            </div>
+            <button class="close-species-btn" onclick="closeSpeciesCard()">×</button>
+          </div>
+
+          <!-- BACK FACE -->
+          <div class="card-face card-back">
+            <div class="back-header">
+              <h2 id="speciesNameBack"></h2>
+            </div>
+            
+            <div class="details-content">
+              <div class="info-section">
+                <h4>📍 Location</h4>
+                <p id="speciesLocation"></p>
+              </div>
+
+              <div class="info-section">
+                <h4>🌱 Habitat</h4>
+                <p id="speciesHabitat"></p>
+              </div>
+
+              <div class="info-section">
+                <h4>ℹ️ Description</h4>
+                <p id="speciesDescription"></p>
+              </div>
+
+              <div class="info-section">
+                <h4>✨ Additional Info</h4>
+                <p id="speciesExtra"></p>
+              </div>
+            </div>
+
+            <button class="flip-btn back-btn" onclick="flipSpeciesCard()">
+              ← Back to Image
+            </button>
+            
+            <button class="close-species-btn" onclick="closeSpeciesCard()">×</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparative Index Modal -->
+  <div class="modal" id="indexModal">
+    <div class="index-modal-box">
+      <div class="index-modal-header">
+        <div class="index-modal-title" id="indexModalTitle">
+          <span id="indexModalIcon"></span>
+          <span id="indexModalTitleText"></span>
+        </div>
+        <button class="icon-btn" onclick="closeIndexModal()">✕ Close</button>
+      </div>
+      <div class="index-modal-content">
+        <div class="index-layout">
+          <div class="index-chart-container">
+            <div class="index-chart-wrapper">
+              <canvas id="indexChart"></canvas>
+            </div>
+          </div>
+          
+          <div class="index-table-container">
+            <table class="index-table" id="indexTable">
+              <thead>
+                <tr>
+                  <th>Habitat</th>
+                  <th id="indexColumnHeader">Index Value</th>
+                </tr>
+              </thead>
+              <tbody id="indexTableBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="index-info-grid" id="indexInfoGrid">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Habitat Composition Modal -->
+  <div class="modal" id="habitatModal">
+    <div class="index-modal-box">
+      <div class="index-modal-header">
+        <div class="index-modal-title" id="habitatModalTitle">
+          <span id="habitatModalIcon"></span>
+          <span id="habitatModalTitleText"></span>
+        </div>
+        <button class="icon-btn" onclick="closeHabitatModal()">✕ Close</button>
+      </div>
+      <div class="index-modal-content">
+        <div class="index-layout">
+          <div class="index-chart-container">
+            <h4 style="margin-bottom: 20px; color: var(--text-bright);">Species Composition</h4>
+            <div class="index-chart-wrapper">
+              <canvas id="habitatBarChart"></canvas>
+            </div>
+          </div>
+          
+          <div class="index-chart-container">
+            <h4 style="margin-bottom: 20px; color: var(--text-bright);">Distribution</h4>
+            <div class="index-chart-wrapper">
+              <canvas id="habitatPieChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 20px;">
+          <p id="habitatDescription" style="color: var(--text); font-size: 15px; line-height: 1.7;"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    // Species data
+    const speciesData = {
+      P1: {
+        name: "Indian Blanket Flower",
+        scientific: " Gaillardia pulchella",
+        image: "rightrocks.jpeg",
+        description: "The Indian Blanket Flower is a bright, colorful wildflower known for its red and yellow daisy-like blooms. The petals are usually deep red in the center with yellow tips, giving it a “blanket-like” pattern.",
+        location: "Right side of Rocks",
+        habitat: "Garden and lawn areas",
+        extra: "The name “Indian Blanket” refers to the flower’s colors, which resemble traditional Native American woven blankets."
+      },
+      P2: {
+        name: "Bamboo",
+        scientific: "Bambusa",
+        image: "leftrocks.jpeg",
+        description: "Description for garden point P2",
+        location: "Left side of Rocks",
+        habitat: "Bamboo is a fast-growing plant belonging to the grass family. It has tall, hollow, jointed stems called culms, with narrow green leaves growing from the nodes. Some species are the fastest growing plants in the world, and many species live for decades. and lawn areas",
+        extra: "It is a technically a grass, not a tree. Some bamboo species can grow up to 90 cm (35 inches) in a single day under ideal conditions. information about this species"
+      },
+      P3: {
+        name: "Garden Species 3",
+        scientific: "Species name 3",
+        image: "placeholder.jpg",
+        description: "Description for garden point P3",
+        location: "Garden/Lawn Point P3",
+        habitat: "Garden and lawn areas",
+        extra: "Additional information about this species"
+      },
+      P4: {
+       name: "Oleander",
+        scientific: "Nerium oleander,",
+        image: "malaviyaqt.jpeg",
+        description: "Oleander is a hardy, evergreen flowering shrub known for its attractive clusters of bright flowers and long, narrow leaves. Flowers: Pink, white, red, yellow, or peach; bloom in clusters. It is widely planted for ornamental purposes due to its colorful blooms and ability to tolerate harsh conditions.",
+        location: "Malaviya QT",
+        habitat: "Garden and lawn areas",
+        extra: "Even a small amount of any part of the plant can be poisonous — historically, there are reports of people getting sick from using its twigs as skewers for cooking. Despite its toxicity, it is extremely resilient and can survive drought, poor soil, and heavy pollution."
+      },
+      P5: {
+        name: "Garden Species 5",
+        scientific: "Species name 5",
+        image: "placeholder.jpg",
+        description: "Description for garden point P5",
+        location: "Garden/Lawn Point P5",
+        habitat: "Garden and lawn areas",
+        extra: "Additional information about this species"
+      },
+      P6: {
+        name: "change",
+        scientific: "change,",
+        image: "malaviyaqt.jpeg",
+        description: "Oleander is a hardy, evergreen flowering shrub known for its attractive clusters of bright flowers and long, narrow leaves. Flowers: Pink, white, red, yellow, or peach; bloom in clusters. It is widely planted for ornamental purposes due to its colorful blooms and ability to tolerate harsh conditions.",
+        location: "Malaviya QT",
+        habitat: "Garden and lawn areas",
+        extra: "Even a small amount of any part of the plant can be poisonous — historically, there are reports of people getting sick from using its twigs as skewers for cooking. Despite its toxicity, it is extremely resilient and can survive drought, poor soil, and heavy pollution."
+      },
+      P7: {
+        name: "Sago Palm",
+        scientific: "Cycas revoluta",
+        image: "liblawns.jpeg",
+        description: "The sago palm is a slow-growing, evergreen plant with a thick, rough, brown trunk and a symmetrical crown of stiff, glossy, dark-green leaves with a height of 1-3 meters. Despite its name, it is not a true palm — it belongs to an ancient group of plants called cycads.",
+        location: "Library Lawns",
+        habitat: "Garden and lawn areas",
+        extra: "One of the oldest plant lineages, dating back over 200 million years"
+      },
+      P8: {
+        name: "Royal Palm Tree",
+        scientific: "Roystonea regia",
+        image: "chesscourt.jpeg",
+        description: "The royal palm is a tall, elegant palm tree known for its smooth, light-gray trunk and perfectly rounded crown of large, feather-like leaves towering over BITS Hyderabad Campus.",
+        location: "Chess Courtyard",
+        habitat: "Garden and lawn areas",
+        extra: "Commonly planted as an ornamental plant in avenues, resorts and gardens."
+      },
+      W1: {
+        name: "Water Lily",
+        scientific: "Nymphaea sp.",
+        image: "water_lily.jpg",
+        description: "A beautiful aquatic flowering plant found in the water bodies of BITS Hyderabad campus.",
+        location: "Water Body Point W1",
+        habitat: "Aquatic habitat with calm, shallow water",
+        extra: "Water lilies reduce algae growth and indicate good water quality"
+      },
+      W2: {
+        name: "Duckweed",
+        scientific: "Lemna minor",
+        image: "duckweed.jpg",
+        description: "Small floating aquatic plant commonly found in still freshwater bodies.",
+        location: "Water Body Point W2",
+        habitat: "Still freshwater ecosystems",
+        extra: "Acts as a bioindicator species"
+      }
+    };
+
+    // Species modal functions
+    function openSpeciesCard(pointId) {
+      const data = speciesData[pointId];
+      if (!data) return;
+
+      document.getElementById("speciesImage").src = data.image;
+      document.getElementById("speciesName").innerText = data.name;
+      document.getElementById("speciesScientific").innerText = data.scientific;
+      document.getElementById("speciesNameBack").innerText = data.name;
+      document.getElementById("speciesDescription").innerText = data.description;
+      document.getElementById("speciesLocation").innerText = data.location;
+      document.getElementById("speciesHabitat").innerText = data.habitat;
+      document.getElementById("speciesExtra").innerText = data.extra;
+
+      document.getElementById('flipCard').classList.remove('flipped');
+      document.getElementById('speciesModal').classList.add('open');
+    }
+
+    function closeSpeciesCard() {
+      document.getElementById('speciesModal').classList.remove('open');
+      setTimeout(() => {
+        document.getElementById('flipCard').classList.remove('flipped');
+      }, 300);
+    }
+
+    function flipSpeciesCard() {
+      document.getElementById('flipCard').classList.toggle('flipped');
+    }
+
+    // Close on overlay click
+    document.getElementById('speciesModal').onclick = (e) => {
+      if (e.target === document.getElementById('speciesModal')) {
+        closeSpeciesCard();
+      }
+    };
+
+    function openInteractiveChart() {
+  window.location.href = 'biodiversity-chart.html';
+}
+
+    // Map initialization
+    const m_to_lat = 1 / 111000;
+    const m_to_lon = 1 / 105800;
+
+    const map = L.map('map', { zoomControl: true }).setView([17.5449, 78.5718], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+      maxZoom: 20, 
+      attribution: '© OpenStreetMap contributors' 
+    }).addTo(map);
+
+    // Campus boundary
+    const campusLayer = L.geoJSON({
+      type:'FeatureCollection',
+      features:[{
+        type:'Feature',
+        properties:{name:'BITS Hyderabad Campus'},
+        geometry:{
+          type:'Polygon',
+          coordinates:[[[78.5668,17.5485],[78.5790,17.5485],[78.5790,17.5380],[78.5668,17.5380],[78.5668,17.5485]]]
+        }
+      }]
+    },{
+      style: { color:'#3fb950', weight:2, fillColor:'#3fb950', fillOpacity:0.05 }
+    }).addTo(map);
+
+    // URBAN TRANSECTS
+    const urbanTransectsData = [
+      {id:'L1', coords:[[78.571010, 17.542245], [78.57185619388197, 17.541848250944017]]},
+      {id:'L2', coords:[[78.575180, 17.541521], [78.57557582299964, 17.542334796579304]]},
+      {id:'L3', coords:[[78.576902, 17.544862], [78.57648350006471, 17.544049000236143]]},
+      {id:'L4', coords:[[78.57735799973707, 17.54450504987758], [78.57691275307988, 17.543635517891868]]},
+      {id:'L5', coords:[[78.57462031723564, 17.544120558115132], [78.57547778972166, 17.54373211891762]]},
+      {id:'L6', coords:[[78.57645944677057, 17.540300943048845], [78.576848980739, 17.541119668637617]]},
+      {id:'L7', coords:[[78.56913353205685, 17.546007655627804], [78.56957609650526, 17.546805568810086]]},
+      {id:'L8', coords:[
+        [78.57223076790223, 17.54441816412916],
+        [78.57221312648649, 17.544063525232716],
+        [78.57232485545288, 17.543832238622034],
+        [78.57256007432947, 17.54364580738162]
+      ]},
+      {id:'L9', coords:[[78.57308454492527, 17.546856866271863], [78.57397809026028, 17.546542111083447]]},
+      {id:'L10', coords:[[78.57131811075043, 17.545896332696195], [78.57171597345452, 17.546722132116226]]}
+    ];
+
+    const urbanTransects = L.geoJSON({
+      type:'FeatureCollection',
+      features: urbanTransectsData.map(t => {
+        return {
+          type:'Feature',
+          properties:{id:t.id},
+          geometry:{type:'LineString', coordinates:t.coords}
+        };
+      })
+    },{
+      style: { color:'#d29922', weight:4, opacity:0.9 },
+      onEachFeature: (f,l) => l.bindPopup(`<b>Urban Transect ${f.properties.id}</b><br>Length: ~100m`)
+    }).addTo(map);
+
+    // FORESTED QUADRATS
+    const quadratCorners = {
+      '1_1': [[78.568758, 17.547811], [78.568758, 17.547382], [78.568309, 17.547382], [78.568309, 17.547811], [78.568758, 17.547811]],
+      '1_2': [[78.568758, 17.546954], [78.568758, 17.546526], [78.568309, 17.546526], [78.568309, 17.546954], [78.568758, 17.546954]],
+      '1_3': [[78.569207, 17.548239], [78.569207, 17.547811], [78.568758, 17.547811], [78.568758, 17.548239], [78.569207, 17.548239]],
+      '1_4': [[78.569207, 17.547382], [78.569207, 17.546954], [78.568758, 17.546954], [78.568758, 17.547382], [78.569207, 17.547382]],
+      '1_5': [[78.570555, 17.547811], [78.570555, 17.547382], [78.570106, 17.547382], [78.570106, 17.547811], [78.570555, 17.547811]],
+      '2_1': [[78.568054, 17.543482], [78.568054, 17.543054], [78.567605, 17.543054], [78.567605, 17.543482], [78.568054, 17.543482]],
+      '2_2': [[78.568503, 17.545623], [78.568503, 17.545195], [78.568054, 17.545195], [78.568054, 17.545623], [78.568503, 17.545623]],
+      '3_1': [[78.570938, 17.547167], [78.570938, 17.546739], [78.570489, 17.546739], [78.570489, 17.547167], [78.570938, 17.547167]],
+      '4_1': [[78.569260, 17.545005], [78.569260, 17.544577], [78.568811, 17.544577], [78.568811, 17.545005], [78.569260, 17.545005]]
+    };
+
+    const zone1Layer = L.geoJSON({
+      type:'FeatureCollection',
+      features: ['1_1', '1_2', '1_3', '1_4', '1_5'].map(id => ({
+        type:'Feature',
+        properties:{id, zone:'Zone 1'},
+        geometry:{type:'Polygon', coordinates:[quadratCorners[id]]}
+      }))
+    },{
+      style: { color:'#e91e63', weight:2, fillColor:'#e91e63', fillOpacity:0.25 },
+      onEachFeature: (f,l) => l.bindPopup(`<b>Quadrat ${f.properties.id}</b><br>Zone 1 (Forested)<br>Size: 50×50m`)
+    }).addTo(map);
+
+    const zone2Layer = L.geoJSON({
+      type:'FeatureCollection',
+      features: ['2_1', '2_2'].map(id => ({
+        type:'Feature',
+        properties:{id, zone:'Zone 2'},
+        geometry:{type:'Polygon', coordinates:[quadratCorners[id]]}
+      }))
+    },{
+      style: { color:'#f44336', weight:2, fillColor:'#f44336', fillOpacity:0.25 },
+      onEachFeature: (f,l) => l.bindPopup(`<b>Quadrat ${f.properties.id}</b><br>Zone 2 (Forested)<br>Size: 50×50m`)
+    }).addTo(map);
+
+    const zone3Layer = L.geoJSON({
+      type:'FeatureCollection',
+      features: ['3_1', '4_1'].map(id => ({
+        type:'Feature',
+        properties:{id, zone:'Zone 3'},
+        geometry:{type:'Polygon', coordinates:[quadratCorners[id]]}
+      }))
+    },{
+      style: { color:'#2196f3', weight:2, fillColor:'#2196f3', fillOpacity:0.25 },
+      onEachFeature: (f,l) => l.bindPopup(`<b>Quadrat ${f.properties.id}</b><br>Zone 3/4 (Forested)<br>Size: 50×50m`)
+    }).addTo(map);
+
+    const zone1Markers = [];
+    const zone2Markers = [];
+    const zone3Markers = [];
+    
+    Object.entries(quadratCorners).forEach(([id, corners]) => {
+      const labels = ['a','b','c','d'];
+      const zone = id.startsWith('1_') ? 1 : id.startsWith('2_') ? 2 : 3;
+      const color = zone === 1 ? '#e91e63' : zone === 2 ? '#f44336' : '#2196f3';
+      
+      corners.slice(0,4).forEach((corner, idx) => {
+        const marker = L.circleMarker([corner[1], corner[0]], {
+          radius: 4,
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.8,
+          weight: 2
+        }).bindPopup(`${id}_${labels[idx]}`);
+        
+        if (zone === 1) {
+          zone1Markers.push(marker);
+          marker.addTo(zone1Layer);
+        } else if (zone === 2) {
+          zone2Markers.push(marker);
+          marker.addTo(zone2Layer);
+        } else {
+          zone3Markers.push(marker);
+          marker.addTo(zone3Layer);
+        }
+      });
+    });
+
+    const forestQuadrats = L.featureGroup([zone1Layer, zone2Layer, zone3Layer]);
+
+    // POINT SAMPLING - Gardens/Lawns and Water Bodies
+    const gardenPoints = [
+      {id:'P1', lat:17.544619, lon:78.572950},
+      {id:'P2', lat:17.543966, lon:78.572558},
+      {id:'P3', lat:17.541329, lon:78.574112},
+      {id:'P4', lat:17.541171, lon:78.574551},
+      {id:'P5', lat:17.544723, lon:78.574424},
+      {id:'P6', lat:17.542566, lon:78.574784},
+      {id:'P7', lat:17.545151, lon:78.571053},
+      {id:'P8', lat:17.545941, lon:78.569690}
+    ];
+
+
+    const waterPoints = [
+      {id:'W1', lat:17.544299, lon:78.573217},
+      {id:'W2', lat:17.546605, lon:78.571864}
+    ];
+
+    // Gardens & lawns markers with View Species button
+    const gardensLayer = L.featureGroup(
+      gardenPoints.map(p => {
+        const marker = L.circleMarker([p.lat, p.lon], {
+          radius: 8,
+          color: '#9b59b6',
+          fillColor: '#9b59b6',
+          fillOpacity: 0.7,
+          weight: 2
+        });
+        
+        const popupContent = `
+          <b>Garden/Lawn Point ${p.id}</b><br>
+          Lat: ${p.lat.toFixed(6)}<br>
+          Lon: ${p.lon.toFixed(6)}<br>
+          <button class="view-species-btn" onclick="openSpeciesCard('${p.id}')">
+            🌿 View Species
+          </button>
+        `;
+        
+        marker.bindPopup(popupContent);
+        return marker;
+      })
+    ).addTo(map);
+
+    // Water bodies markers with View Species button
+    const waterBodiesLayer = L.featureGroup(
+      waterPoints.map(p => {
+        const marker = L.circleMarker([p.lat, p.lon], {
+          radius: 8,
+          color: '#58a6ff',
+          fillColor: '#58a6ff',
+          fillOpacity: 0.7,
+          weight: 2
+        });
+        
+        const popupContent = `
+          <b>Water Body Point ${p.id}</b><br>
+          Lat: ${p.lat.toFixed(6)}<br>
+          Lon: ${p.lon.toFixed(6)}<br>
+          <button class="view-species-btn" onclick="openSpeciesCard('${p.id}')">
+            💧 View Species
+          </button>
+        `;
+        
+        marker.bindPopup(popupContent);
+        return marker;
+      })
+    ).addTo(map);
+
+    const pointsLayer = L.featureGroup([gardensLayer, waterBodiesLayer]);
+
+    // Fit to all features
+    const allLayers = L.featureGroup([campusLayer, urbanTransects, forestQuadrats, pointsLayer]);
+    map.fitBounds(allLayers.getBounds(), {padding:[20,20]});
+
+    // Layer control
+    L.control.layers(null, {
+      'Urbanized areas': urbanTransects,
+      'Forested areas': forestQuadrats,
+      'Water bodies': waterBodiesLayer,
+      'Gardens & lawns': gardensLayer
+    }, {collapsed:false, position:'topright'}).addTo(map);
+
+    // Zoom buttons
+    document.getElementById('btn-campus').onclick  = ()=>map.fitBounds(campusLayer.getBounds(),{padding:[20,20]});
+    document.getElementById('btn-urban').onclick   = ()=>map.fitBounds(urbanTransects.getBounds(),{padding:[20,20]});
+    document.getElementById('btn-forests').onclick = ()=>map.fitBounds(forestQuadrats.getBounds(),{padding:[20,20]});
+    document.getElementById('btn-points').onclick  = ()=>map.fitBounds(pointsLayer.getBounds(),{padding:[20,20]});
+
+    // Chart galleries
+    const galleries = {
+      overall: [{ src:'top_overall_pie.jpg', title:'Overall Species Abundance Distribution' }],
+      water:   [{ src:'water_comp.jpg', title:'Species Composition — Water Bodies (Combined)' }],
+      shannon: [{ src:'shannon_by_habitat.jpg', title:"Shannon's Diversity Index Across Habitats" }],
+      simpson: [{ src:'simpson_by_habitat.jpg', title:"Simpson's Diversity (1−D) Across Habitats" }],
+      evenness:[{ src:'evenness_by_habitat.jpg', title:'Evenness Index (J) Across Habitats' }],
+      gardens: [{ src:'gardens_comp.jpg', title:'Species Composition — Gardens & Lawns (Combined)' }],
+      forests: [{ src:'forests_comp.jpg', title:'Species Composition — Forested Areas (Combined)' }],
+      urban:   [{ src:'urban_comp.jpg', title:'Species Composition — Urban Transects (Combined)' }]
+    };
+
+    // Modal functionality for charts
+    const modal = document.getElementById('chartModal');
+    const modalImg = document.getElementById('modalImg');
+    const modalTitle = document.getElementById('modalTitle');
+    const closeBtn = document.getElementById('closeBtn');
+
+    let currentGallery = [];
+    let currentIndex = 0;
+
+    function openGallery(key) {
+      currentGallery = galleries[key] || [];
+      currentIndex = 0;
+      if (!currentGallery.length) return;
+      updateModal();
+      modal.classList.add('open');
+    }
+
+    function updateModal() {
+      const item = currentGallery[currentIndex];
+      modalImg.src = item.src;
+      modalTitle.textContent = `${item.title} (${currentIndex + 1}/${currentGallery.length})`;
+    }
+
+    closeBtn.onclick = () => modal.classList.remove('open');
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.classList.remove('open');
+    };
+
+    // Wire chart buttons
+    document.querySelectorAll('button[data-gallery]').forEach(btn => {
+      btn.addEventListener('click', () => openGallery(btn.getAttribute('data-gallery')));
+    });
+
+    // Comparative Index Data
+    const indexData = {
+      shannon: {
+        icon: '📈',
+        title: "Shannon Diversity Index – What It Shows",
+        columnHeader: "Shannon (H')",
+        data: [
+          { habitat: "Gardens & Lawns", value: 0.815, color: '#4facfe', interpretation: "Very low diversity, strongly dominated by Trees (~67.5%) and Terrestrial Plants (~27.6%). Uneven species distribution." },
+          { habitat: "Forested Areas", value: 1.195, color: '#feca57', interpretation: "Moderate diversity, still dominated by Terrestrial Plants (55%) and Trees (25%). Better balance than gardens." },
+          { habitat: "Water Bodies", value: 0.552, color: '#0fbcf9', interpretation: "Lowest diversity, overwhelmingly dominated by Aquatic Plants (~85%). Birds, fish, insects are present but minor." },
+          { habitat: "Urban Areas", value: 1.368, color: '#ff6b6b', interpretation: "Highest diversity among the four. Trees (39%) and Terrestrial Plants (28%) still dominate, but overall community is much more balanced." }
+        ],
+        insights: [
+          {
+            title: "🏘️ Urban areas",
+            content: "Urban areas have the highest value, indicating the greatest variety of species with a fairly balanced presence. The mix of parks, buildings, gardens, and open spaces creates different niches that support diverse plant and animal life."
+          },
+          {
+            title: "🌲 Forested areas",
+            content: "Forested areas show moderate diversity, with multiple species present, although trees and terrestrial plants are still more dominant."
+          },
+          {
+            title: "🌺 Gardens and lawns",
+            content: "Gardens and lawns have lower diversity, mainly because they are often landscaped and contain a limited variety of planted species."
+          },
+          {
+            title: "💧 Water bodies",
+            content: "Water bodies have the lowest diversity, as they are heavily dominated by aquatic plants, with fewer fish, insects, and birds contributing to the overall species richness."
+          }
+        ],
+        keyTakeaway: "Urban areas, even though they are human-modified, surprisingly support more diverse and balanced communities, while water bodies tend to be specialized habitats dominated by one main group—usually aquatic plants."
+      },
+      simpson: {
+        icon: '📉',
+        title: "Simpson's Diversity Index – What It Shows",
+        columnHeader: "Simpson's (1-D)",
+        data: [
+          { habitat: "Gardens & Lawns", value: 0.467, color: '#4facfe', interpretation: "Very low diversity, strongly dominated by Trees (~67.5%) and Terrestrial Plants (~27.6%). Uneven species distribution." },
+          { habitat: "Forested Areas", value: 0.616, color: '#feca57', interpretation: "Moderate diversity, still dominated by Terrestrial Plants (55%) and Trees (25%). Better balance than gardens." },
+          { habitat: "Water Bodies", value: 0.266, color: '#0fbcf9', interpretation: "Lowest diversity, overwhelmingly dominated by Aquatic Plants (~85%). Birds, fish, insects are present but minor." },
+          { habitat: "Urban Areas", value: 0.708, color: '#ff6b6b', interpretation: "Highest diversity among the four. Trees (39%) and Terrestrial Plants (28%) still dominate, but overall community is much more balanced." }
+        ],
+        insights: [
+          {
+            title: "🏘️ Urban areas",
+            content: "Urban areas have the highest Simpson's value, meaning no single species takes over the habitat and the community is well-balanced."
+          },
+          {
+            title: "🌲 Forested areas",
+            content: "Forested areas also show fairly good balance, but trees and terrestrial plants still dominate to some extent."
+          },
+          {
+            title: "🌺 Gardens and lawns",
+            content: "Gardens and lawns have lower diversity, with a few species—like planted trees and shrubs—making up most of the population."
+          },
+          {
+            title: "💧 Water bodies",
+            content: "Water bodies have the lowest value, which means they are strongly dominated by one group, mostly aquatic plants, with very little presence from other species."
+          }
+        ],
+        keyTakeaway: "Higher Simpson's value means less dominance. Urban areas are the least dominated by any one species, while water bodies are heavily dominated by aquatic plants."
+      },
+      evenness: {
+        icon: '⚖️',
+        title: "Evenness (J) Index – What It Shows",
+        columnHeader: "Evenness (J)",
+        data: [
+          { habitat: "Gardens & Lawns", value: 0.455, color: '#4facfe', interpretation: "Very low diversity, strongly dominated by Trees (~67.5%) and Terrestrial Plants (~27.6%). Uneven species distribution." },
+          { habitat: "Forested Areas", value: 0.575, color: '#feca57', interpretation: "Moderate diversity, still dominated by Terrestrial Plants (55%) and Trees (25%). Better balance than gardens." },
+          { habitat: "Water Bodies", value: 0.398, color: '#0fbcf9', interpretation: "Lowest diversity, overwhelmingly dominated by Aquatic Plants (~85%). Birds, fish, insects are present but minor." },
+          { habitat: "Urban Areas", value: 0.703, color: '#ff6b6b', interpretation: "Highest diversity among the four. Trees (39%) and Terrestrial Plants (28%) still dominate, but overall community is much more balanced." }
+        ],
+        insights: [
+          {
+            title: "🏘️ Urban areas",
+            content: "Urban areas have the highest evenness value, showing that species are more evenly distributed and no single group becomes overpowering."
+          },
+          {
+            title: "🌲 Forested areas",
+            content: "Forested areas have moderate evenness, with some balance but still a noticeable dominance of trees and terrestrial plants."
+          },
+          {
+            title: "🌺 Gardens and lawns",
+            content: "Gardens and lawns show lower evenness because a few planted species dominate, leaving less room for variety."
+          },
+          {
+            title: "💧 Water bodies",
+            content: "Water bodies have the lowest evenness, meaning most of the habitat is occupied by aquatic plants, with very limited presence of other organisms."
+          }
+        ],
+        keyTakeaway: "Urban areas have the most balanced distribution of species, while water bodies are highly uneven, with one group dominating most of the space."
+      }
+    };
+
+    let currentIndexChart = null;
+
+    function openIndexModal(indexType) {
+      const data = indexData[indexType];
+      if (!data) return;
+
+      // Set modal title
+      document.getElementById('indexModalIcon').textContent = data.icon;
+      document.getElementById('indexModalTitleText').textContent = data.title;
+      document.getElementById('indexColumnHeader').textContent = data.columnHeader;
+
+      // Create chart
+      createIndexChart(data);
+
+      // Create table
+      createIndexTable(data);
+
+      // Create insight cards
+      createIndexInsights(data);
+
+      // Show modal
+      document.getElementById('indexModal').classList.add('open');
+    }
+
+    function createIndexChart(data) {
+      const ctx = document.getElementById('indexChart').getContext('2d');
+      
+      if (currentIndexChart) {
+        currentIndexChart.destroy();
+      }
+
+      currentIndexChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.data.map(d => d.habitat),
+          datasets: [{
+            label: data.columnHeader,
+            data: data.data.map(d => d.value),
+            backgroundColor: data.data.map(d => d.color),
+            borderColor: data.data.map(d => d.color),
+            borderWidth: 2,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {
+            duration: 1000,
+            easing: 'easeOutQuart'
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: '#8b96a5',
+                font: { size: 12 }
+              },
+              grid: {
+                color: '#2a3441'
+              }
+            },
+            x: {
+              ticks: {
+                color: '#8b96a5',
+                font: { size: 12 }
+              },
+              grid: {
+                display: false
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(22, 27, 38, 0.98)',
+              titleColor: '#e6edf3',
+              bodyColor: '#8b96a5',
+              borderColor: '#3d4a5e',
+              borderWidth: 1,
+              padding: 16,
+              callbacks: {
+                label: function(context) {
+                  return data.columnHeader + ': ' + context.parsed.y.toFixed(3);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function createIndexTable(data) {
+      const tbody = document.getElementById('indexTableBody');
+      tbody.innerHTML = '';
+
+      data.data.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="habitat-label">${item.habitat}</td>
+          <td><strong>${item.value.toFixed(3)}</strong></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function createIndexInsights(data) {
+      const grid = document.getElementById('indexInfoGrid');
+      grid.innerHTML = '';
+
+      data.insights.forEach(insight => {
+        const card = document.createElement('div');
+        card.className = 'index-info-card';
+        card.innerHTML = `
+          <h3>${insight.title}</h3>
+          <p>${insight.content}</p>
+        `;
+        grid.appendChild(card);
+      });
+
+      // Add key takeaway card
+      const takeawayCard = document.createElement('div');
+      takeawayCard.className = 'index-info-card';
+      takeawayCard.style.gridColumn = '1 / -1';
+      takeawayCard.innerHTML = `
+        <h3>📌 Key Takeaway</h3>
+        <p>${data.keyTakeaway}</p>
+      `;
+      grid.appendChild(takeawayCard);
+    }
+
+    function closeIndexModal() {
+      document.getElementById('indexModal').classList.remove('open');
+      if (currentIndexChart) {
+        currentIndexChart.destroy();
+        currentIndexChart = null;
+      }
+    }
+
+    // Close modal on overlay click
+    document.getElementById('indexModal').onclick = (e) => {
+      if (e.target === document.getElementById('indexModal')) {
+        closeIndexModal();
+      }
+    };
+
+    // Habitat Composition Data
+    const habitatData = {
+      gardens: {
+        icon: '🌺',
+        title: 'Gardens and Lawns',
+        subtitle: '(Rock garden, Hostel QTs, etc)',
+        data: [
+          { species: 'Tree', count: 2070, color: '#7cb5ec' },
+          { species: 'Terrestrial Plants', count: 845, color: '#90ed7d' },
+          { species: 'Shrubs', count: 100, color: '#f7a35c' },
+          { species: 'Bird', count: 31, color: '#8085e9' },
+          { species: 'Mammals', count: 15, color: '#f15c80' },
+          { species: 'Insect', count: 5, color: '#e4d354' }
+        ],
+        description: 'The species composition in Gardens is heavily dominated by Trees and Terrestrial Plants, which together make up the vast majority of the population. Overall, Gardens are plant-rich environments with minimal representation of animal species.'
+      },
+      forests: {
+        icon: '🌲',
+        title: 'Forested Areas',
+        subtitle: '(Quadrants behind and around NAB)',
+        data: [
+          { species: 'Terrestrial Plants', count: 1521, color: '#7cb5ec' },
+          { species: 'Tree', count: 680, color: '#434348' },
+          { species: 'Shrubs', count: 295, color: '#90ed7d' },
+          { species: 'Insects', count: 188, color: '#f7a35c' },
+          { species: 'Bird', count: 54, color: '#8085e9' },
+          { species: 'Mammal', count: 5, color: '#f15c80' },
+          { species: 'Reptiles', count: 3, color: '#e4d354' },
+          { species: 'Amphibian', count: 1, color: '#2b908f' }
+        ],
+        description: 'The species composition in Forest Areas shows a strong dominance of Terrestrial Plants, followed by Trees, indicating dense vegetation and rich plant biodiversity. Faunal groups such as Insects, Shrubs, and Mammals are present in moderate proportions, while Birds, Reptiles, and Amphibians make up very small fractions.'
+      },
+      urban: {
+        icon: '🏘️',
+        title: 'Urban Areas',
+        subtitle: '(Roads along CP, Acad Block, OFG, etc)',
+        data: [
+          { species: 'Tree', count: 465, color: '#7cb5ec' },
+          { species: 'Terrestrial Plants', count: 338, color: '#90ed7d' },
+          { species: 'Shrubs', count: 292, color: '#f7a35c' },
+          { species: 'Bird', count: 59, color: '#8085e9' },
+          { species: 'Insects', count: 26, color: '#f15c80' },
+          { species: 'Mammals', count: 18, color: '#e4d354' },
+          { species: 'Amphibians', count: 1, color: '#2b908f' }
+        ],
+        description: 'Urban areas show a more balanced distribution of species compared to forests and gardens. While trees and terrestrial plants still dominate, their numbers are lower than in forests and gardens, indicating limited vegetation density. Shrubs, birds, and insects are relatively more common in urban spaces than in gardens.'
+      },
+      water: {
+        icon: '💧',
+        title: 'Water Bodies',
+        subtitle: '(Lotus Pond, Pond near gate)',
+        data: [
+          { species: 'Aquatic Plants', count: 354, color: '#7cb5ec' },
+          { species: 'Fish', count: 33, color: '#90ed7d' },
+          { species: 'Insect', count: 25, color: '#f7a35c' },
+          { species: 'Bird', count: 4, color: '#8085e9' }
+        ],
+        description: 'Water bodies show a clear dominance of aquatic plants, which make up the vast majority of the species count. Fish and insects appear in moderate numbers, indicating their role as consumers in these ecosystems. Overall, water ecosystems exhibit low diversity but strong ecological specialization, with plants forming the foundation for all other aquatic life.'
+      }
+    };
+
+    let habitatBarChart = null;
+    let habitatPieChart = null;
+
+    function openHabitatModal(habitatType) {
+      const data = habitatData[habitatType];
+      if (!data) return;
+
+      // Set modal title
+      document.getElementById('habitatModalIcon').textContent = data.icon;
+      document.getElementById('habitatModalTitleText').innerHTML = `${data.title}<br><span style="font-size: 16px; font-weight: 400; opacity: 0.7;">${data.subtitle}</span>`;
+      document.getElementById('habitatDescription').textContent = data.description;
+
+      // Create charts
+      createHabitatCharts(data);
+
+      // Show modal
+      document.getElementById('habitatModal').classList.add('open');
+    }
+
+    function createHabitatCharts(data) {
+      // Destroy existing charts
+      if (habitatBarChart) habitatBarChart.destroy();
+      if (habitatPieChart) habitatPieChart.destroy();
+
+      // Bar Chart
+      const barCtx = document.getElementById('habitatBarChart').getContext('2d');
+      habitatBarChart = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+          labels: data.data.map(d => d.species),
+          datasets: [{
+            label: 'Count',
+            data: data.data.map(d => d.count),
+            backgroundColor: data.data.map(d => d.color),
+            borderColor: data.data.map(d => d.color),
+            borderWidth: 2,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          animation: {
+            duration: 1000,
+            easing: 'easeOutQuart'
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: {
+                color: '#8b96a5',
+                font: { size: 11 }
+              },
+              grid: {
+                color: '#2a3441'
+              }
+            },
+            y: {
+              ticks: {
+                color: '#8b96a5',
+                font: { size: 11 }
+              },
+              grid: {
+                display: false
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(22, 27, 38, 0.98)',
+              titleColor: '#e6edf3',
+              bodyColor: '#8b96a5',
+              borderColor: '#3d4a5e',
+              borderWidth: 1,
+              padding: 12,
+              callbacks: {
+                label: function(context) {
+                  return 'Count: ' + context.parsed.x.toLocaleString();
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Pie Chart
+      const pieCtx = document.getElementById('habitatPieChart').getContext('2d');
+      habitatPieChart = new Chart(pieCtx, {
+        type: 'pie',
+        data: {
+          labels: data.data.map(d => d.species),
+          datasets: [{
+            data: data.data.map(d => d.count),
+            backgroundColor: data.data.map(d => d.color),
+            borderColor: '#0a0e17',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {
+            duration: 1000,
+            easing: 'easeOutQuart'
+          },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: '#8b96a5',
+                font: { size: 11 },
+                padding: 10,
+                usePointStyle: true
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(22, 27, 38, 0.98)',
+              titleColor: '#e6edf3',
+              bodyColor: '#8b96a5',
+              borderColor: '#3d4a5e',
+              borderWidth: 1,
+              padding: 12,
+              callbacks: {
+                label: function(context) {
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = ((context.parsed / total) * 100).toFixed(1);
+                  return context.label + ': ' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function closeHabitatModal() {
+      document.getElementById('habitatModal').classList.remove('open');
+      if (habitatBarChart) {
+        habitatBarChart.destroy();
+        habitatBarChart = null;
+      }
+      if (habitatPieChart) {
+        habitatPieChart.destroy();
+        habitatPieChart = null;
+      }
+    }
+
+    // Close modal on overlay click
+    document.getElementById('habitatModal').onclick = (e) => {
+      if (e.target === document.getElementById('habitatModal')) {
+        closeHabitatModal();
+      }
+    };
+  </script>
+</body>
+</html>
