@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- ============================================================
+     BITS Hyderabad Biodiversity Atlas
+     ============================================================ -->
+
+<head>
+  <meta charset="utf-8" />
+  <title>BITS Hyderabad Biodiversity Atlas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- External Dependencies -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  
+</head>
+
+<!-- ============================================================ -->
+<body>
+<link rel="stylesheet" href="css/styles.css" />
+  <div class="bg-animation"></div>
+
+  <!-- ── Header ──────────────────────────────────────────────── -->
+  <header>
+    <div class="header-content">
+      <div class="brand">
+        <div class="brand-icon">🌿</div>
+        <div class="brand-text">
+          <h1>BITS Hyderabad Biodiversity Atlas</h1>
+          <div class="tagline">Advanced GIS mapping • Field surveys • Campus-wide diversity analytics</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main Container ──────────────────────────────────────── -->
+  <div class="container">
+
+    <!-- About Section -->
+    <div class="intro-section">
+      <h2 style="margin-top: 0;">📖 About This Atlas</h2>
+      <p>
+        Welcome to the BITS Hyderabad Biodiversity Atlas — a comprehensive, interactive mapping
+        platform documenting the rich ecological diversity across our campus. This atlas combines
+        advanced GIS technology, field surveys, and biodiversity indices to provide a detailed
+        overview of plant and animal species distribution across different habitat types including
+        forested areas, urban zones, gardens, and water bodies.
+      </p>
+      <p>
+        Through systematic surveying and data analysis, we have mapped over 6,000 individual
+        observations across the campus, providing insights into species composition, habitat
+        preferences, and ecological diversity patterns. Click on map markers to explore species
+        information, view comparative charts, and understand the biodiversity metrics that
+        characterize our campus ecosystem.
+      </p>
+    </div>
+
+    <!-- Biodiversity Indices Section -->
+    <div class="indices-section">
+      <h3 style="margin-top: 0; margin-bottom: 16px;">🔬 Biodiversity Indices — Understanding Campus Diversity</h3>
+      <div class="index-cards">
+
+        <button class="index-card-btn" onclick="openIndexInfo('shannon')">
+          <div class="index-card-icon">📈</div>
+          <div class="index-card-content">
+            <div class="index-card-title">Shannon Index</div>
+            <div class="index-card-hint">Species variety &amp; balance</div>
+          </div>
+        </button>
+
+        <button class="index-card-btn" onclick="openIndexInfo('simpson')">
+          <div class="index-card-icon">📉</div>
+          <div class="index-card-content">
+            <div class="index-card-title">Simpson's Index</div>
+            <div class="index-card-hint">Dominance measurement</div>
+          </div>
+        </button>
+
+        <button class="index-card-btn" onclick="openIndexInfo('evenness')">
+          <div class="index-card-icon">⚖️</div>
+          <div class="index-card-content">
+            <div class="index-card-title">Evenness Index</div>
+            <div class="index-card-hint">Distribution uniformity</div>
+          </div>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- Map + Metrics Two-Column Layout -->
+    <div class="layout">
+
+      <!-- ── Left: Map Panel ──────────────────────────────────── -->
+      <div class="panel">
+
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-icon">🗺️</div>
+            Interactive Campus Map
+          </div>
+        </div>
+
+        <div class="map-instructions">
+          <span class="instruction-icon">💡</span>
+          <span><strong>Tip:</strong> Click on the purple/blue markers to view detailed species information</span>
+        </div>
+
+        <div class="controls">
+          <button class="btn accent" id="btn-campus">🏫 Campus Overview</button>
+          <button class="btn"        id="btn-urban">🏘️ Urban Transects</button>
+          <button class="btn"        id="btn-forests">🌲 Forest Quadrats</button>
+          <button class="btn"        id="btn-points">📍 Sampling Points</button>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="legend">
+          <div class="legend-item"><span class="swatch" style="background: #3fb950;"></span>Campus Boundary</div>
+          <div class="legend-item"><span class="swatch" style="background: #d29922;"></span>Urbanized Areas</div>
+          <div class="legend-item"><span class="swatch" style="background: #2ea043;"></span>Forested Areas</div>
+          <div class="legend-item"><span class="swatch" style="background: #58a6ff;"></span>Water Bodies</div>
+          <div class="legend-item"><span class="swatch" style="background: #9b59b6;"></span>Gardens &amp; Lawns</div>
+        </div>
+
+        <div class="methods">
+          <h3>📋 Survey Methodology</h3>
+          <ul>
+            <li><strong>Spatial Framework:</strong> Interactive GIS mapping using Leaflet.js with OpenStreetMap tiles for precise georeferencing</li>
+            <li><strong>Forested Areas:</strong> 50×50m quadrat sampling across three zones for comprehensive vegetation and fauna surveys</li>
+            <li><strong>Urban Corridors:</strong> 100m line transects along roads and built-up areas to assess adaptation and diversity</li>
+            <li><strong>Gardens &amp; Water Bodies:</strong> Strategic point sampling at key locations (gardens, lawns, ponds) for habitat-specific documentation</li>
+            <li><strong>Data Analysis:</strong> Shannon-Wiener, Simpson's, and Evenness indices calculated to quantify biodiversity patterns</li>
+          </ul>
+        </div>
+
+      </div><!-- /left panel -->
+
+      <!-- ── Right: Metrics Panel ─────────────────────────────── -->
+      <div class="panel">
+
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-icon">📊</div>
+            Diversity Metrics
+          </div>
+        </div>
+
+        <h2>Campus-Wide Analysis</h2>
+
+        <div class="metrics-grid">
+          <div class="metric">
+            <div class="metric-label">Shannon-Wiener (H′)</div>
+            <div class="metric-value">1.37</div>
+            <div class="metric-hint">Low–moderate diversity; dominated by few groups</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Simpson's D</div>
+            <div class="metric-value">0.458</div>
+            <div class="metric-hint">46% probability same group</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Simpson's (1−D)</div>
+            <div class="metric-value">0.542</div>
+            <div class="metric-hint">Moderate group distinction</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Evenness (J)</div>
+            <div class="metric-value">0.59</div>
+            <div class="metric-hint">Uneven distribution pattern</div>
+          </div>
+        </div>
+
+        <details open>
+          <summary>Key Insights</summary>
+          <div>
+            The Shannon-Wiener index (H′ = 1.37) and Simpson's diversity (1−D = 0.54) reveal
+            moderate overall diversity with significant compositional skew. Trees constitute
+            approximately 50% of recorded species, while terrestrial plants account for 25%.
+            The evenness index (J = 0.59) confirms imbalanced abundance distribution across
+            taxonomic groups, suggesting opportunities for biodiversity enhancement.
+          </div>
+        </details>
+
+        <h3>Habitat-Specific Indices</h3>
+
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-title">🏘️ Urbanized Zones</div>
+            <div class="card-content">
+              <strong>H′ 1.368</strong> • <strong>1−D 0.708</strong> • <strong>J 0.703</strong><br>
+              Most balanced species composition among all surveyed habitats.
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">🌲 Forested Areas</div>
+            <div class="card-content">
+              <strong>H′ 1.195</strong> • <strong>1−D 0.616</strong> • <strong>J 0.575</strong><br>
+              Moderate diversity. Terrestrial plants (55%) and trees (25%) dominate.
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">🌺 Gardens &amp; Lawns</div>
+            <div class="card-content">
+              <strong>H′ 0.815</strong> • <strong>1−D 0.467</strong> • <strong>J 0.455</strong><br>
+              Dominated by trees (~67.5%) and terrestrial plants (~27.6%).
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">💧 Water Bodies</div>
+            <div class="card-content">
+              <strong>H′ 0.552</strong> • <strong>1−D 0.266</strong> • <strong>J 0.398</strong><br>
+              Aquatic plants dominate (~85%). Lowest diversity among habitats.
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Visualizations -->
+        <h3>Data Visualizations</h3>
+
+        <h4>Overall Campus</h4>
+        <div class="controls">
+          <button class="btn accent" onclick="window.location.href='biodiversity-chart.html'">📊 Overall Abundance Chart</button>
+        </div>
+
+        <h4>Comparative Indices</h4>
+        <div class="controls">
+          <button class="btn" onclick="openIndexModal('shannon')">📈 Shannon Index by Habitat</button>
+          <button class="btn" onclick="openIndexModal('simpson')">📉 Simpson's Index by Habitat</button>
+          <button class="btn" onclick="openIndexModal('evenness')">⚖️ Evenness by Habitat</button>
+        </div>
+
+        <h4>Habitat Composition</h4>
+        <div class="controls">
+          <button class="btn" onclick="openHabitatModal('gardens')">🌺 Gardens &amp; Lawns</button>
+          <button class="btn" onclick="openHabitatModal('forests')">🌲 Forested Areas</button>
+          <button class="btn" onclick="openHabitatModal('urban')">🏘️ Urban Transects</button>
+          <button class="btn" onclick="openHabitatModal('water')">💧 Water Bodies</button>
+        </div>
+
+        <h4>Ornamental Plants</h4>
+        <div class="controls">
+          <button class="btn" onclick="openOrnamentalGallery('rocks')">🪨 Rocks</button>
+          <button class="btn" onclick="openOrnamentalGallery('newacad')">🌸 New Acad Pathway</button>
+        </div>
+
+      </div><!-- /right panel -->
+
+    </div><!-- /layout -->
+
+  </div><!-- /container -->
+
+  <footer>BITS Pilani Hyderabad Campus Biodiversity Project</footer>
+
+
+  <!-- ============================================================
+       MODALS
+       ============================================================ -->
+
+  <!-- Species Flip Card Modal -->
+  <div class="modal" id="speciesModal">
+    <div class="modal-box" style="max-width:550px; width:550px; padding:0; overflow:visible; background:transparent; border:none; box-shadow:none;">
+      <div style="perspective:1200px; width:550px; margin:0 auto;">
+        <div class="flip-card" id="flipCard">
+
+          <!-- Front: Photo -->
+          <div class="card-face card-front">
+            <img id="speciesImg" class="species-image" alt="Species photo">
+            <div class="image-overlay">
+              <div class="overlay-content">
+                <h2 id="sp-name"></h2>
+                <p class="sci" id="sp-sci"></p>
+                <button class="flip-btn" onclick="flipCard()">View Details →</button>
+              </div>
+            </div>
+            <button class="close-circle-btn" onclick="closeSpeciesModal()">×</button>
+          </div>
+
+          <!-- Back: Details -->
+          <div class="card-face card-back">
+            <div class="back-header">
+              <h2 id="sp-name-back"></h2>
+            </div>
+            <div class="details-content">
+              <div class="info-section"><h4>📍 Location</h4>   <p id="sp-location"></p></div>
+              <div class="info-section"><h4>🌱 Habitat</h4>    <p id="sp-habitat"></p></div>
+              <div class="info-section"><h4>ℹ️ Description</h4><p id="sp-desc"></p></div>
+              <div class="info-section"><h4>✨ Additional Info</h4><p id="sp-extra"></p></div>
+            </div>
+            <button class="flip-btn back-btn" onclick="flipCard()">← Back to Image</button>
+            <button class="close-circle-btn" onclick="closeSpeciesModal()">×</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparative Index Modal -->
+  <div class="modal" id="indexModal">
+    <div class="big-modal-box">
+      <div class="big-modal-header">
+        <div class="big-modal-title">
+          <span id="idx-icon"></span>
+          <span id="idx-title"></span>
+        </div>
+        <button class="icon-btn" onclick="closeIndexModal()">✕ Close</button>
+      </div>
+      <div class="big-modal-body">
+        <div class="two-col">
+          <div class="chart-box">
+            <div class="chart-wrap"><canvas id="indexChart"></canvas></div>
+          </div>
+          <div class="idx-table-box">
+            <table class="idx-table">
+              <thead>
+                <tr>
+                  <th>Habitat</th>
+                  <th id="idx-col-header">Value</th>
+                </tr>
+              </thead>
+              <tbody id="idx-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="insight-grid" id="idx-insights"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Habitat Composition Modal -->
+  <div class="modal" id="habitatModal">
+    <div class="big-modal-box">
+      <div class="big-modal-header">
+        <div class="big-modal-title">
+          <span id="hab-icon"></span>
+          <span id="hab-title"></span>
+        </div>
+        <button class="icon-btn" onclick="closeHabitatModal()">✕ Close</button>
+      </div>
+      <div class="big-modal-body">
+        <div class="chart-box">
+          <h4>Species Composition</h4>
+          <div class="chart-wrap"><canvas id="habBarChart"></canvas></div>
+        </div>
+        <div class="desc-strip"><p id="hab-desc"></p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ornamental Plants Gallery Modal -->
+  <div class="modal" id="ornamentalModal">
+    <div class="modal-box" style="max-width:900px; width:95vw;">
+      <div class="modal-toolbar">
+        <div class="modal-title" id="orn-title">Ornamental Plants</div>
+        <button class="icon-btn" onclick="closeOrnamentalModal()">✕ Close</button>
+      </div>
+      <div class="gallery-inner">
+        <img id="orn-img" class="gallery-img" alt="Ornamental plant">
+        <div class="gallery-nav">
+          <button class="btn" id="orn-prev" onclick="ornNavigate(-1)">← Previous</button>
+          <span class="gallery-counter" id="orn-counter">1 / 1</span>
+          <button class="btn" id="orn-next" onclick="ornNavigate(1)">Next →</button>
+        </div>
+        <div class="gallery-name" id="orn-name"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Index Information Modal -->
+  <div class="modal" id="indexInfoModal">
+    <div class="modal-box" style="max-width:700px; width:90vw;">
+      <div class="modal-toolbar">
+        <div class="modal-title">
+          <span id="info-icon" style="margin-right: 8px;"></span>
+          <span id="info-title">Index Information</span>
+        </div>
+        <button class="icon-btn" onclick="closeIndexInfoModal()">✕ Close</button>
+      </div>
+      <div style="padding: 10px 0;">
+        <div class="info-box">
+
+          <h3 style="margin-top: 0; color: var(--accent2);">📊 What This Index Measures</h3>
+          <p id="info-meaning" style="color: var(--text); font-size: 15px; line-height: 1.7; margin-bottom: 20px;"></p>
+
+          <h3 style="color: var(--accent);">🎯 Campus Value</h3>
+          <div style="background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+            <div id="info-value" style="font-size: 32px; font-weight: 800; color: var(--accent2);"></div>
+          </div>
+
+          <h3>💡 Interpretation</h3>
+          <p id="info-interpretation" style="color: var(--text); font-size: 15px; line-height: 1.7; margin-bottom: 20px;"></p>
+
+          <div style="background: linear-gradient(135deg, rgba(88,166,255,0.1), rgba(57,211,83,0.1)); border-radius: 10px; padding: 16px; border: 1px solid var(--border);">
+            <p style="color: var(--text); font-size: 14px; margin: 0;">
+              <strong>Want to see more?</strong>
+              Click on "Comparative Indices" below to view detailed habitat-by-habitat comparisons.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       SCRIPTS
+       ============================================================ -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="data/species.js"></script>
+<script src="data/habitatData.js"></script>
+<script src="data/ornamentalData.js"></script>
+<script src="data/indexData.js"></script>
+
+<script src="app.js"></script>
+</body>
+</html>
+
